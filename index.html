@@ -309,7 +309,46 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         theirpublickey[currentroom] = myroom1[currentroom].theirpublickey;
         console.log(theirpublickey[currentroom])
         AESkey[currentroom] = myroom1[currentroom].AES;
-        joinThis({appId: 'Trustero', password: myroom1[currentroom].AES}, currentroom);
+
+        const iceServers = [
+                {
+                "urls": "stun:global.stun.twilio.com:3478"
+                },
+                {
+                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
+                "credential": "tE2DajzSJwnsSbc123",
+                "urls": "turn:global.turn.twilio.com:3478?transport=udp"
+                },
+                {
+                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
+                "credential": "tE2DajzSJwnsSbc123",
+                "urls": "turn:global.turn.twilio.com:3478?transport=tcp"
+                },
+                {
+                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
+                "credential": "tE2DajzSJwnsSbc123",
+                "urls": "turn:global.turn.twilio.com:443?transport=tcp"
+                }
+            ]
+
+            
+
+            const rtcConfig = {
+                iceServers: iceServers,
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all',
+                bundlePolicy: 'max-bundle',
+                rtcpMuxPolicy: 'require',
+                sdpSemantics: 'unified-plan'
+            };
+
+            const customConfig = {
+                appId: 'Trustero', 
+                password: myroom1[currentroom].AES,
+                rtcConfig: rtcConfig
+            }
+
+        joinThis(customConfig, currentroom);
         notify("Joined Room - " + Object.keys(myroom1)[0]);
     }
 
@@ -531,6 +570,8 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
     });    
 
     async function joinThis(config, myroom2) {
+
+        console.log("**config3", config)
         if(room[myroom2]) {
             console.log("Entering chat: ", myroom2);
             return;
@@ -738,7 +779,44 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
             currentroom = sharedKeys;            
             rooms.push({[sharedKeys]:{'name':chatRoomName, 'theirpublickey':theirpublickey2, 'AES':AESkey2}});
             localStorage.setItem(publickey + ":rooms", JSON.stringify(rooms));
-            joinThis({appId: 'Trustero', password: AESkey2}, sharedKeys);
+
+            const iceServers = [
+                {
+                "urls": "stun:global.stun.twilio.com:3478"
+                },
+                {
+                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
+                "credential": "tE2DajzSJwnsSbc123",
+                "urls": "turn:global.turn.twilio.com:3478?transport=udp"
+                },
+                {
+                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
+                "credential": "tE2DajzSJwnsSbc123",
+                "urls": "turn:global.turn.twilio.com:3478?transport=tcp"
+                },
+                {
+                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
+                "credential": "tE2DajzSJwnsSbc123",
+                "urls": "turn:global.turn.twilio.com:443?transport=tcp"
+                }
+            ]
+
+            const rtcConfig = {
+                iceServers: iceServers,
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all',
+                bundlePolicy: 'max-bundle',
+                rtcpMuxPolicy: 'require',
+                sdpSemantics: 'unified-plan'
+            };
+
+            const customConfig = {
+                appId: 'Trustero', 
+                password: AESkey2,
+                rtcConfig: rtcConfig
+            }
+
+            joinThis(customConfig, sharedKeys);
             notify("Joined Room - " + sharedKeys);
             roomselect();
             dialog.remove();
