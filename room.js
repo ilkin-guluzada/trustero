@@ -255,6 +255,9 @@ export default (onPeer, onSelfLeave) => {
   let onPeerTrack = noOp
 
   onPeer((peer, id) => {
+
+    console.log("*comes here inn joinroom onPeerJoin", id, peer)
+
     if (peerMap[id]) {
       return
     }
@@ -283,6 +286,7 @@ export default (onPeer, onSelfLeave) => {
       }
       console.error(e)
     })
+
 
     onPeerJoin(id)
     peer.__drainEarlyData(onData)

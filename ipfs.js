@@ -35,6 +35,7 @@ const init = config =>
 let nodeP
 
 export const joinRoom = initGuard(occupiedRooms, (config, ns) => {
+
   const rootTopic = `${libName.toLowerCase()}:${config.appId}:${ns}`
   const selfTopic = `${rootTopic}:${selfId}`
   const offers = {}

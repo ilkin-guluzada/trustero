@@ -9,6 +9,7 @@
 <script type="text/javascript" src="./purify.js"></script>
 <script type="text/javascript" src="./mainSW.js"></script>
 <script type="text/javascript" src="./jquery.min.js"></script>
+<script type="text/javascript" src="./config.js"></script>
 <head>
 <meta charset="utf-8" />
 <meta
@@ -105,7 +106,6 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
                 Object.keys(fileData).forEach(function(key) {
                     localStorage.setItem(key, fileData[key]);
                 });
-                console.log('Local storage data overwritten with data from file.');
             } catch (error) {
                 console.error('Error parsing file data:', error);
             }
@@ -133,6 +133,8 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
 </script>
 <script type="module">
     import {joinRoom, selfId} from './torrent.js';
+    import {iceServers} from './config.js';
+    console.log(iceServers)
     const letschat = document.getElementById("enterchat");
     const removechat = document.getElementById("removechat");
     const sendthis = document.getElementById("sendbutton");
@@ -176,14 +178,11 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
           const storageEstimate = await navigator.storage.estimate();
 
           if (storageEstimate.usageDetails.persistentUsage > 0) {
-            console.log('Persistent storage is already granted.');
           } else {
             const granted = await navigator.storage.persist();
 
             if (granted) {
-              console.log('Persistent storage is now granted.');
             } else {
-              console.log('Persistent storage request was denied.');
             }
           }
         } catch (error) {
@@ -307,31 +306,7 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         visiblemessages = 0;
         await populateMessages();
         theirpublickey[currentroom] = myroom1[currentroom].theirpublickey;
-        console.log(theirpublickey[currentroom])
         AESkey[currentroom] = myroom1[currentroom].AES;
-
-        const iceServers = [
-                {
-                "urls": "stun:global.stun.twilio.com:3478"
-                },
-                {
-                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
-                "credential": "tE2DajzSJwnsSbc123",
-                "urls": "turn:global.turn.twilio.com:3478?transport=udp"
-                },
-                {
-                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
-                "credential": "tE2DajzSJwnsSbc123",
-                "urls": "turn:global.turn.twilio.com:3478?transport=tcp"
-                },
-                {
-                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
-                "credential": "tE2DajzSJwnsSbc123",
-                "urls": "turn:global.turn.twilio.com:443?transport=tcp"
-                }
-            ]
-
-            
 
             const rtcConfig = {
                 iceServers: iceServers,
@@ -571,9 +546,7 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
 
     async function joinThis(config, myroom2) {
 
-        console.log("**config3", config)
         if(room[myroom2]) {
-            console.log("Entering chat: ", myroom2);
             return;
         }
         room[myroom2] = joinRoom(config, myroom2);
@@ -652,7 +625,6 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
     function notify(mystring, myroom4='') {
         if(myroom4 != '') {
             if(myroom4 != currentroom) {
-                console.log(mystring);
                 return;
             }
         }
@@ -780,26 +752,6 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
             rooms.push({[sharedKeys]:{'name':chatRoomName, 'theirpublickey':theirpublickey2, 'AES':AESkey2}});
             localStorage.setItem(publickey + ":rooms", JSON.stringify(rooms));
 
-            const iceServers = [
-                {
-                "urls": "stun:global.stun.twilio.com:3478"
-                },
-                {
-                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
-                "credential": "tE2DajzSJwnsSbc123",
-                "urls": "turn:global.turn.twilio.com:3478?transport=udp"
-                },
-                {
-                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
-                "credential": "tE2DajzSJwnsSbc123",
-                "urls": "turn:global.turn.twilio.com:3478?transport=tcp"
-                },
-                {
-                "username": "dc2d2894d5a9023620c467b0e71cfa6a35457e6679785ed6ae9856fe5bdfa269",
-                "credential": "tE2DajzSJwnsSbc123",
-                "urls": "turn:global.turn.twilio.com:443?transport=tcp"
-                }
-            ]
 
             const rtcConfig = {
                 iceServers: iceServers,

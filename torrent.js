@@ -41,6 +41,7 @@ export const joinRoom = initGuard(occupiedRooms, (config, ns) => {
       : config.trackerRedundancy || defaultRedundancy
   )
 
+
   if (!trackerUrls.length) {
     throw mkErr('trackerUrls is empty')
   }
@@ -57,6 +58,7 @@ export const joinRoom = initGuard(occupiedRooms, (config, ns) => {
   const makeOffers = () =>
     fromEntries(
       new Array(offerPoolSize).fill().map(() => {
+
         const peer = initPeer(true, false, config.rtcConfig)
 
         return [
@@ -247,19 +249,24 @@ export const joinRoom = initGuard(occupiedRooms, (config, ns) => {
   let offerPool
 
   occupiedRooms[ns] = true
+
   announceAll()
 
-  return room(
-    f => (onPeerConnect = f),
-    async () => {
-      const infoHash = await infoHashP
 
-      trackerUrls.forEach(url => delete socketListeners[url][infoHash])
-      delete occupiedRooms[ns]
-      clearInterval(announceInterval)
-      cleanPool()
-    }
-  )
+const room_ = room(
+  f => (onPeerConnect = f),
+  async () => {
+    const infoHash = await infoHashP
+
+    trackerUrls.forEach(url => delete socketListeners[url][infoHash])
+    delete occupiedRooms[ns]
+    clearInterval(announceInterval)
+    cleanPool()
+  }
+)
+
+console.log("*comes here inn joinroom 3", room_)
+return room_
 })
 
 export {selfId} from './utils.js'

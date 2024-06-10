@@ -6,37 +6,7 @@
 */
 var cacheAll = true;
 var CACHE_NAME = 'webapk-cache';
-var urlsToCache = [
-	'./index.html',
-	'./mainSW.js',
-	'./jquery.min.js',
-	'./logo.png',
-	'./favicon.png',
-	'./Pidgeon.png',
-	'./manifest.json',	
-	'./ellipticcurve.js',
-	'./crypto-sha256.js',
-	'./jsbn.js',
-	'./aes.js',
-	'./crypto-js.js',
-	'./cryptico.min.js',
-	'./purify.js',
-	'./ipfs.js',
-	'./index.js',
-	'./firebase.js',
-	'./peerjs.min.js',
-	'./torrent.js',
-	'./room.js',
-	'./crypto.js',
-	'./simplepeer.js',
-	'./simplepeer.min.js',
-	'./utils.js',
-	'./rsa.js',
-	'./random.js',
-	'./hash.js',
-	'./api.js',
-	'./sw.js',
-];
+var urlsToCache = [];
 
 var urlsNotToCache = [
 	// Urls that don't need to be cached can be added here explicitly

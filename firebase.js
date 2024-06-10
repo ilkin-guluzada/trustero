@@ -48,6 +48,7 @@ export const joinRoom = initGuard(occupiedRooms, (config, ns) => {
       return peerMap[id]
     }
 
+
     const peer = initPeer(initiator, true, config.rtcConfig)
 
     peer.on(events.connect, () => {
