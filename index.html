@@ -133,6 +133,7 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
 </script>
 <script type="module">
     import {joinRoom, selfId} from './torrent.js';
+    import {iceServers}  from './config.js';
     const letschat = document.getElementById("enterchat");
     const removechat = document.getElementById("removechat");
     const sendthis = document.getElementById("sendbutton");
@@ -309,7 +310,23 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         theirpublickey[currentroom] = myroom1[currentroom].theirpublickey;
         console.log(theirpublickey[currentroom])
         AESkey[currentroom] = myroom1[currentroom].AES;
-        joinThis({appId: 'Trustero', password: myroom1[currentroom].AES}, currentroom);
+    
+        const rtcConfig = {
+            iceServers: iceServers,
+            iceCandidatePoolSize: 10,
+            iceTransportPolicy: 'all',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require',
+            sdpSemantics: 'unified-plan'
+        };
+
+        const customConfig = {
+            appId: 'Trustero', 
+            password: myroom1[currentroom].AES,
+            rtcConfig: rtcConfig
+        }
+
+        joinThis(customConfig, currentroom);
         notify("Joined Room - " + Object.keys(myroom1)[0]);
     }
 
@@ -738,7 +755,23 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
             currentroom = sharedKeys;            
             rooms.push({[sharedKeys]:{'name':chatRoomName, 'theirpublickey':theirpublickey2, 'AES':AESkey2}});
             localStorage.setItem(publickey + ":rooms", JSON.stringify(rooms));
-            joinThis({appId: 'Trustero', password: AESkey2}, sharedKeys);
+            
+            const rtcConfig = {
+                iceServers: iceServers,
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all',
+                bundlePolicy: 'max-bundle',
+                rtcpMuxPolicy: 'require',
+                sdpSemantics: 'unified-plan'
+            };
+
+            const customConfig = {
+                appId: 'Trustero', 
+                password: AESkey2,
+                rtcConfig: rtcConfig
+            }
+
+            joinThis(customConfig, sharedKeys);
             notify("Joined Room - " + sharedKeys);
             roomselect();
             dialog.remove();
