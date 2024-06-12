@@ -734,7 +734,7 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
             mykeys.push(publickey);
             mykeys.push(theirpublickey2);
             mykeys.sort();
-            var sharedKeys = Crypto.SHA256(mykeys[0]+mykeys[1]);
+            var sharedKeys = Crypto.SHA256(mykeys[0]+mykeys[1]+AESkey2);
             currentroom = sharedKeys;            
             rooms.push({[sharedKeys]:{'name':chatRoomName, 'theirpublickey':theirpublickey2, 'AES':AESkey2}});
             localStorage.setItem(publickey + ":rooms", JSON.stringify(rooms));
