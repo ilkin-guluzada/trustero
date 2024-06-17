@@ -133,6 +133,8 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
 </script>
 <script type="module">
     import {joinRoom, selfId} from './torrent.js';
+    import {iceServers}  from './config.js';
+    import indexedDBHandler from './indexedDBHandler.js';
     const letschat = document.getElementById("enterchat");
     const removechat = document.getElementById("removechat");
     const sendthis = document.getElementById("sendbutton");
@@ -169,6 +171,27 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
             }
         }
     }, false);
+
+    const BATCH_SIZE = 10; 
+    let loadedMessages = 0; 
+
+    async function populateMessages(startingIndex = 0) {
+        const messages = await indexedDBHandler.getMessagesBatch(currentroom, startingIndex, BATCH_SIZE);
+        messages.forEach(async message => {
+            await prependMessageToDiv(message);
+        });
+        loadedMessages += messages.length;
+    }
+
+    function isAtTopOfMessages() {
+        return messagesDiv.scrollTop === 0;
+    }
+
+    messagesDiv.addEventListener('scroll', async function () {
+        if (isAtTopOfMessages()) {
+            await populateMessages(loadedMessages);
+        }
+    });
 
     async function checkAndRequestPersistentStorage() {
       if ('storage' in navigator && 'estimate' in navigator.storage) {
@@ -246,7 +269,8 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
     var oncall = '';
     var mynotifications = {};
     var otherkey = '';
-    function login() {
+
+    async function login() {
         var user = document.getElementById("username").value;
         var password = document.getElementById("password").value;
         var mybits = parseInt(document.getElementById("bits").value);
@@ -256,8 +280,17 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         document.getElementById("Info").innerHTML = "Your public key(share this to anyone who you wish to chat with): <br>" + publickey;
         rooms = JSON.parse(localStorage.getItem(publickey + ":rooms")) || [];
         mynotifications = JSON.parse(localStorage.getItem(publickey + ":mynotifications")) || {};
-        mymessages = JSON.parse(localStorage.getItem(publickey + ":messages")) || {};
+        await loadMessagesFromDB();
         roomselect();
+    }
+
+    async function loadMessagesFromDB() {
+        mymessages = {};
+        for (let room of rooms) {
+            let roomId = Object.keys(room)[0];
+            mymessages[roomId] = await indexedDBHandler.getMessages(roomId);
+        }
+        console.log('login',mymessages)
     }
     function roomselect() {
         const select = document.getElementById("room-select");
@@ -297,21 +330,45 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
     async function showroom(myroom1) {
         if (typeof myroom1 === "undefined") {
             return;
-        }        
+        }
         currentroom = Object.keys(myroom1)[0];
         if (!mymessages.hasOwnProperty(currentroom)) {
-          mymessages[currentroom] = [];
+            mymessages[currentroom] = [];
         }
         document.getElementById("mymessage").value = "";
         document.getElementById("messages").innerHTML = "";
-        visiblemessages = 0;
+        loadedMessages = 0;
         await populateMessages();
         theirpublickey[currentroom] = myroom1[currentroom].theirpublickey;
-        console.log(theirpublickey[currentroom])
         AESkey[currentroom] = myroom1[currentroom].AES;
-        joinThis({appId: 'Trustero', password: myroom1[currentroom].AES}, currentroom);
+
+        const rtcConfig = {
+            iceServers: iceServers,
+            iceCandidatePoolSize: 10,
+            iceTransportPolicy: 'all',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require',
+            sdpSemantics: 'unified-plan'
+        };
+
+        const customConfig = {
+            appId: 'Trustero',
+            password: myroom1[currentroom].AES,
+            rtcConfig: rtcConfig
+        };
+
+        joinThis(customConfig, currentroom);
         notify("Joined Room - " + Object.keys(myroom1)[0]);
     }
+
+    async function populateMessagesFromDB() {
+        const messages = await indexedDBHandler.getMessages(currentroom);
+        messagesDiv.innerHTML = ''; // Clear current messages
+        messages.forEach(async message => {
+            await prependMessageToDiv(message);
+        });
+    }
+
 
     sendthis.addEventListener('click', async function() {
         await makeMessage();
@@ -327,32 +384,35 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
     })
 
     async function makeMessage(msg = "", thisroom = "") {
-      if(thisroom == "") {
-        thisroom = currentroom;
-      }
-      if (room[thisroom]) {
-        updatePeerInfo(thisroom);
-        if(msg == "") {
-            msg = DOMPurify.sanitize(document.getElementById("mymessage").value);
+        if (thisroom == "") {
+            thisroom = currentroom;
         }
-        if(msg == "[image attached]" && myimage) {
-            msg = myimage;
+        if (room[thisroom]) {
+            updatePeerInfo(thisroom);
+            if (msg == "") {
+                msg = DOMPurify.sanitize(document.getElementById("mymessage").value);
+            }
+            if (msg == "[image attached]" && myimage) {
+                msg = myimage;
+            }
+            var timestamp = Math.floor(Date.now() / 1000);
+            var themessage = msg + "#!#!#!#" + timestamp + "#!#!#!#" + rand + Crypto.SHA256(rand);
+            var encrypted = cryptico.encrypt(themessage, theirpublickey[thisroom], RSAKeys);
+            if (AESkey[thisroom] == 'optional') {
+                sendMessage[thisroom]([encrypted.cipher]);
+            } else {
+                sendMessage[thisroom]([CryptoJS.AES.encrypt(encrypted.cipher, AESkey[thisroom]).toString()]);
+            }
+            mymessages[thisroom].unshift({ 'message': CryptoJS.AES.encrypt(msg, otherkey).toString(), 'peerInfo': peerInfo, 'timestamp': timestamp, 'sent': 1 });
+            await indexedDBHandler.storeMessage(thisroom, { 'message': CryptoJS.AES.encrypt(msg, otherkey).toString(), 'peerInfo': peerInfo, 'timestamp': timestamp, 'sent': 1 });
+            if (thisroom == currentroom) {
+                await prependMessageToDiv(mymessages[thisroom][0]);
+                document.getElementById("mymessage").value = "";
+            }
+
+
         }
-        var timestamp = Math.floor(Date.now() / 1000)
-        var themessage = msg + "#!#!#!#" + timestamp + "#!#!#!#" + rand + Crypto.SHA256(rand);//Add some junk data to avoid cryptoanalysis
-        var encrypted = cryptico.encrypt(themessage, theirpublickey[thisroom], RSAKeys);
-        if(AESkey[thisroom] == 'optional') {
-            sendMessage[thisroom]([encrypted.cipher]);
-        } else {
-            sendMessage[thisroom]([CryptoJS.AES.encrypt(encrypted.cipher, AESkey[thisroom]).toString()]);
-        }
-        //NOTE: This method doesn't guarantee they decrypted the message. The best method is to let them send you signed confirmation
-        mymessages[thisroom].unshift({'message':CryptoJS.AES.encrypt(msg, otherkey).toString(),'peerInfo':peerInfo,'timestamp':timestamp, 'sent': 1});
-        if(thisroom == currentroom) {
-            await prependMessageToDiv(mymessages[thisroom][0]);
-            document.getElementById("mymessage").value = "";
-        }
-      }
+        console.log("makeMessage");
     }
 
     letschat.addEventListener('click', function() {
@@ -373,15 +433,18 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         roomselect();
     });
 
-    addImage.addEventListener('click', async function()  {
+    addImage.addEventListener('click', async function() {
         myimage = false;
-        myimage = await getB64Image();        
-        if(myimage) {            
+        myimage = await getB64Image();
+        if (myimage) {
             myimage = "data:image/png;base64," + myimage;
-            if(compressthis.checked) {
+            if (compressthis.checked) {
                 myimage = await resizeImage(myimage);
             }
+            await indexedDBHandler.storeFile(Crypto.SHA256(myimage), myimage);
             document.getElementById("mymessage").value = '[image attached]';
+
+            console.log("image stored in indexed DB")
         }
     });
 
@@ -493,17 +556,16 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
 
     // Function to prepend a message to the messages div
     async function prependMessageToDiv(message) {
-        localStorage.setItem(publickey + ":messages", JSON.stringify(mymessages));
         const newDiv = document.createElement('div');
         var msg = CryptoJS.AES.decrypt(message.message, otherkey).toString(CryptoJS.enc.Utf8);
-        if(msg.substr(-4).toLowerCase() == ".jpg" || msg.substr(-4).toLowerCase() == ".png" || msg.substr(-4).toLowerCase() == ".bmp") {
-            if(loadimages == true) {
+        if (msg.substr(-4).toLowerCase() == ".jpg" || msg.substr(-4).toLowerCase() == ".png" || msg.substr(-4).toLowerCase() == ".bmp") {
+            if (loadimages == true) {
                 try {
-                    var res = await checkImage(msg.replace(/[^A-Za-z0-9./:]/gi,''))
-                    if(res.result == true) {                
-                        msg = '<img src="' + msg.replace(/[^A-Za-z0-9./:]/gi,'') + '">'
+                    var res = await checkImage(msg.replace(/[^A-Za-z0-9./:]/gi, ''));
+                    if (res.result == true) {
+                        msg = '<img src="' + msg.replace(/[^A-Za-z0-9./:]/gi, '') + '">'
                     }
-                } catch(e) {
+                } catch (e) {
                     console.log(e);
                     msg = '[image not loaded]';
                 }
@@ -511,8 +573,8 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         }
         if (msg.substring(0, 23) === "data:image/jpeg;base64," || msg.substring(0, 22) === "data:image/png;base64,") {
             msg = msg.replace(/^data:(.*;base64,)?/, '');
-            msg = '<img src="' + "data:image/jpeg;base64," + msg.replace(/[^A-Za-z0-9+/=]/gi,'') + '">';
-            if(loadimages == false) {
+            msg = '<img src="' + "data:image/jpeg;base64," + msg.replace(/[^A-Za-z0-9+/=]/gi, '') + '">';
+            if (loadimages == false) {
                 msg = '[image not loaded]';
             }
         }
@@ -522,7 +584,10 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
             newDiv.innerHTML = "Them: " + msg + "<br>Time: " + message.timestamp + "<br><br>";
         }
         messagesDiv.insertBefore(newDiv, messagesDiv.firstChild);
+        await indexedDBHandler.storeMessage(currentroom, message);
+        console.log("message prepended to div and stored in db")
     }
+
 
     messagesDiv.addEventListener('scroll', async function () {
         if (isAtBottomOfMessages()) {
@@ -738,7 +803,23 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
             currentroom = sharedKeys;            
             rooms.push({[sharedKeys]:{'name':chatRoomName, 'theirpublickey':theirpublickey2, 'AES':AESkey2}});
             localStorage.setItem(publickey + ":rooms", JSON.stringify(rooms));
-            joinThis({appId: 'Trustero', password: AESkey2}, sharedKeys);
+            
+            const rtcConfig = {
+                iceServers: iceServers,
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all',
+                bundlePolicy: 'max-bundle',
+                rtcpMuxPolicy: 'require',
+                sdpSemantics: 'unified-plan'
+            };
+
+            const customConfig = {
+                appId: 'Trustero', 
+                password: AESkey2,
+                rtcConfig: rtcConfig
+            }
+
+            joinThis(customConfig, sharedKeys);
             notify("Joined Room - " + sharedKeys);
             roomselect();
             dialog.remove();
