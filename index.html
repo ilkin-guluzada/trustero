@@ -504,7 +504,7 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         return canvas.toDataURL('image/jpeg', 0.9); // Reduce quality to reduce size and convert to jpeg format
     }
 
-    async function populateMessages(startingIndex = 0) {
+    async function populateMessages2(startingIndex = 0) {
         var mytext = document.createElement('div');
         var i = 0;
         var x = 0;
@@ -587,13 +587,6 @@ Password:  &nbsp<input class="textBox" type="password" id="password" type="text"
         await indexedDBHandler.storeMessage(currentroom, message);
         console.log("message prepended to div and stored in db")
     }
-
-
-    messagesDiv.addEventListener('scroll', async function () {
-        if (isAtBottomOfMessages()) {
-            await populateMessages(visiblemessages);
-        }
-    });    
 
     async function joinThis(config, myroom2) {
         if(room[myroom2]) {
